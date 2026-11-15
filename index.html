@@ -1,0 +1,2089 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="BLUFF // DECK" />
+  <meta name="theme-color" content="#09090B" />
+  <title>BLUFF // DECK</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@500;600;700;800&family=JetBrains+Mono:wght@600;700;800&display=swap" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    :root {
+      --bg-obsidian: #09090B;
+      --bg-surface: #141418;
+      --bg-surface-2: #1C1C22;
+      --bg-surface-3: #26262F;
+      --border-hairline: rgba(255, 255, 255, 0.08);
+      --border-strong: rgba(255, 255, 255, 0.16);
+      --text-primary: #F4F4F6;
+      --text-secondary: #A1A1AA;
+      --text-muted: #71717A;
+      --mint: #00F090;
+      --indigo: #5B73F8;
+      --amber: #FBBF24;
+      --coral: #FF6B6B;
+      --accent-active: #00F090;
+      --accent-ink: #07130D;
+      --radius-card: 28px;
+      --radius-tile: 18px;
+      --radius-pill: 999px;
+      --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
+    }
+
+    * {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+    }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      background-color: #050507;
+      color: var(--text-primary);
+      font-family: var(--font-sans);
+      height: 100%;
+      overflow: hidden;
+    }
+
+    .app-shell {
+      position: relative;
+      width: 100%;
+      max-width: 460px;
+      height: 100dvh;
+      margin: 0 auto;
+      background: var(--bg-obsidian);
+      display: flex;
+      flex-direction: column;
+      padding-top: max(12px, env(safe-area-inset-top));
+      padding-bottom: max(14px, env(safe-area-inset-bottom));
+      padding-left: 16px;
+      padding-right: 16px;
+      overflow: hidden;
+    }
+
+    @media (min-width: 520px) {
+      body {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .app-shell {
+        height: min(860px, 95dvh);
+        border-radius: 42px;
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        box-shadow: 0 30px 90px rgba(0, 0, 0, 0.85);
+      }
+    }
+
+    /* TOP BAR */
+    .top-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      height: 44px;
+      flex-shrink: 0;
+      margin-bottom: 12px;
+    }
+
+    .top-left {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .icon-circle {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: var(--bg-surface);
+      border: 1px solid var(--border-hairline);
+      color: var(--text-primary);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: transform 0.12s ease, background 0.15s ease;
+    }
+
+    .icon-circle:active {
+      transform: scale(0.92);
+      background: var(--bg-surface-2);
+    }
+
+    .mini-brand {
+      display: grid;
+      grid-template-columns: repeat(2, 13px);
+      gap: 3px;
+      cursor: pointer;
+    }
+
+    .mini-tile {
+      width: 13px;
+      height: 13px;
+      border-radius: 4px;
+      font-family: var(--font-mono);
+      font-size: 8px;
+      font-weight: 800;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #09090B;
+    }
+
+    .timer-pill {
+      position: relative;
+      min-width: 88px;
+      height: 36px;
+      padding: 0 14px;
+      border-radius: var(--radius-pill);
+      background: var(--bg-surface);
+      border: 1px solid var(--border-hairline);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      font-family: var(--font-mono);
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      color: var(--text-primary);
+      transition: border-color 0.2s ease, color 0.2s ease;
+    }
+
+    .timer-fill {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      background: rgba(255, 255, 255, 0.06);
+      transform-origin: left center;
+      pointer-events: none;
+    }
+
+    .timer-text {
+      position: relative;
+      z-index: 1;
+    }
+
+    .timer-pill.warn {
+      border-color: rgba(251, 191, 36, 0.6);
+      color: var(--amber);
+      animation: pulseWarn 0.9s infinite ease-in-out;
+    }
+
+    .timer-pill.warn .timer-fill {
+      background: rgba(251, 191, 36, 0.16);
+    }
+
+    .timer-pill.danger {
+      border-color: rgba(255, 107, 107, 0.85);
+      color: var(--coral);
+      animation: heartbeat 0.55s infinite ease-in-out;
+    }
+
+    .timer-pill.danger .timer-fill {
+      background: rgba(255, 107, 107, 0.22);
+    }
+
+    @keyframes pulseWarn {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.04); }
+    }
+
+    @keyframes heartbeat {
+      0%, 100% { transform: scale(1); }
+      35% { transform: scale(1.1); }
+      65% { transform: scale(0.98); }
+    }
+
+    .top-right {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    /* MAIN VIEWPORT */
+    .stage {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+      gap: 12px;
+    }
+
+    /* HERO COLOR-BLOCKED CARD */
+    .hero-card {
+      position: relative;
+      background: var(--accent-active);
+      color: var(--accent-ink);
+      border-radius: var(--radius-card);
+      padding: 18px 20px 22px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      min-height: 245px;
+      flex: 1.05;
+      transition: background-color 0.35s cubic-bezier(0.22, 1, 0.36, 1), color 0.25s ease;
+      overflow: hidden;
+    }
+
+    .hero-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      z-index: 2;
+    }
+
+    .round-chip {
+      background: rgba(0, 0, 0, 0.14);
+      color: inherit;
+      font-family: var(--font-mono);
+      font-size: 12px;
+      font-weight: 800;
+      padding: 5px 11px;
+      border-radius: var(--radius-pill);
+      letter-spacing: 0.03em;
+    }
+
+    .topic-pill {
+      background: rgba(0, 0, 0, 0.16);
+      color: inherit;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      padding: 5px 12px;
+      border-radius: var(--radius-pill);
+      max-width: 195px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .player-turn-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(0, 0, 0, 0.15);
+      padding: 4px 10px 4px 5px;
+      border-radius: var(--radius-pill);
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .hero-body {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 12px 4px;
+      z-index: 2;
+    }
+
+    .prompt-text {
+      font-size: clamp(19px, 4.8vw, 23px);
+      font-weight: 800;
+      line-height: 1.32;
+      letter-spacing: -0.02em;
+      margin: 0;
+    }
+
+    .blank-slot {
+      display: inline-block;
+      min-width: 96px;
+      padding: 0 8px;
+      border-bottom: 3px solid currentColor;
+      font-family: var(--font-mono);
+      font-size: 0.88em;
+      font-weight: 800;
+      text-transform: uppercase;
+    }
+
+    .giant-countdown {
+      position: absolute;
+      right: 16px;
+      bottom: 6px;
+      font-family: var(--font-mono);
+      font-size: 92px;
+      font-weight: 800;
+      line-height: 1;
+      color: rgba(0, 0, 0, 0.13);
+      pointer-events: none;
+      animation: popDigit 0.55s infinite ease-out;
+    }
+
+    @keyframes popDigit {
+      0% { transform: scale(0.82); opacity: 0.24; }
+      100% { transform: scale(1.12); opacity: 0.06; }
+    }
+
+    .timesup-overlay {
+      position: absolute;
+      inset: 0;
+      background: var(--coral);
+      color: #09090B;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      font-family: var(--font-mono);
+      font-size: 32px;
+      font-weight: 800;
+      letter-spacing: 0.04em;
+      z-index: 10;
+      animation: flashIn 0.2s ease-out;
+    }
+
+    @keyframes flashIn {
+      from { transform: scale(1.08); opacity: 0; }
+      to { transform: scale(1); opacity: 1; }
+    }
+
+    /* LOWER INTERACTION DECK */
+    .lower-deck {
+      flex: 0.95;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: 10px;
+      min-height: 0;
+      overflow-y: auto;
+    }
+
+    .input-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-hairline);
+      border-radius: 22px;
+      padding: 14px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      transition: border-color 0.2s ease;
+    }
+
+    .input-card:focus-within {
+      border-color: var(--accent-active);
+    }
+
+    .input-label-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+
+    .bluff-input {
+      width: 100%;
+      background: transparent;
+      border: none;
+      outline: none;
+      color: var(--text-primary);
+      font-family: var(--font-sans);
+      font-size: 16px;
+      font-weight: 700;
+      padding: 4px 0;
+      user-select: text;
+      -webkit-user-select: text;
+    }
+
+    .bluff-input::placeholder {
+      color: var(--text-muted);
+      font-weight: 600;
+    }
+
+    .truth-warning {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(255, 107, 107, 0.14);
+      border: 1px solid rgba(255, 107, 107, 0.4);
+      color: var(--coral);
+      font-size: 12px;
+      font-weight: 700;
+      padding: 6px 10px;
+      border-radius: 12px;
+    }
+
+    /* VOTING GRID */
+    .vote-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+      flex: 1;
+      align-content: start;
+    }
+
+    .vote-tile {
+      position: relative;
+      background: var(--bg-surface);
+      border: 1px solid var(--border-hairline);
+      border-radius: var(--radius-tile);
+      padding: 14px 12px 24px;
+      min-height: 76px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      color: var(--text-primary);
+      font-size: 14px;
+      font-weight: 700;
+      line-height: 1.25;
+      cursor: pointer;
+      transition: transform 0.12s ease, background 0.18s ease, border-color 0.18s ease, color 0.18s ease;
+    }
+
+    .vote-tile:active:not(.disabled) {
+      transform: scale(0.96);
+    }
+
+    .vote-tile.selected {
+      background: var(--accent-active);
+      color: var(--accent-ink);
+      border-color: var(--accent-active);
+    }
+
+    .vote-tile.disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+    }
+
+    .tile-key {
+      position: absolute;
+      right: 10px;
+      bottom: 7px;
+      font-family: var(--font-mono);
+      font-size: 10px;
+      font-weight: 800;
+      opacity: 0.55;
+    }
+
+    /* BOTTOM ACTION DOCK */
+    .bottom-dock {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      height: 52px;
+      flex-shrink: 0;
+      margin-top: 4px;
+    }
+
+    .dock-pill-btn {
+      height: 48px;
+      padding: 0 15px;
+      border-radius: var(--radius-pill);
+      background: var(--bg-surface);
+      border: 1px solid var(--border-hairline);
+      color: var(--text-primary);
+      font-family: var(--font-mono);
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: 0.04em;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      cursor: pointer;
+      transition: transform 0.12s ease, background 0.15s ease, border-color 0.15s ease;
+      white-space: nowrap;
+    }
+
+    .dock-pill-btn:active {
+      transform: scale(0.94);
+      background: var(--bg-surface-2);
+    }
+
+    .dock-pill-btn.active-decoy {
+      border-color: var(--amber);
+      color: var(--amber);
+    }
+
+    .confirm-btn {
+      flex: 1;
+      height: 48px;
+      border-radius: var(--radius-pill);
+      border: none;
+      background: var(--bg-surface-2);
+      color: var(--text-muted);
+      font-family: var(--font-sans);
+      font-size: 15px;
+      font-weight: 800;
+      cursor: pointer;
+      transition: background 0.2s ease, color 0.2s ease, transform 0.12s ease;
+    }
+
+    .confirm-btn.ready {
+      background: var(--accent-active);
+      color: var(--accent-ink);
+    }
+
+    .confirm-btn.ready:active {
+      transform: scale(0.97);
+    }
+
+    .confirm-btn:disabled {
+      cursor: not-allowed;
+    }
+
+    /* AVATAR COMPONENT */
+    .avatar-circle {
+      border-radius: 50%;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      flex-shrink: 0;
+      color: #09090B;
+      border: 2px solid rgba(255, 255, 255, 0.2);
+    }
+
+    /* LOBBY & SETUP */
+    .lobby-status-row {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-top: 10px;
+    }
+
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(0, 0, 0, 0.16);
+      padding: 5px 11px;
+      border-radius: var(--radius-pill);
+      font-family: var(--font-mono);
+      font-size: 11px;
+      font-weight: 800;
+    }
+
+    .status-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: currentColor;
+    }
+
+    .player-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .player-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: var(--bg-surface);
+      border: 1px solid var(--border-hairline);
+      border-radius: 18px;
+      padding: 8px 10px;
+    }
+
+    .player-name-input {
+      flex: 1;
+      background: transparent;
+      border: none;
+      outline: none;
+      color: var(--text-primary);
+      font-family: var(--font-sans);
+      font-size: 16px;
+      font-weight: 700;
+      min-width: 0;
+      user-select: text;
+      -webkit-user-select: text;
+    }
+
+    .chip-action {
+      background: var(--bg-surface-2);
+      border: 1px solid var(--border-hairline);
+      color: var(--text-secondary);
+      border-radius: var(--radius-pill);
+      padding: 6px 11px;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .chip-action:active {
+      transform: scale(0.95);
+    }
+
+    .cloud-bar-btn {
+      width: 100%;
+      background: var(--bg-surface);
+      border: 1px solid var(--border-hairline);
+      color: var(--text-primary);
+      border-radius: 16px;
+      padding: 11px 14px;
+      font-size: 12px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      cursor: pointer;
+    }
+
+    .cloud-bar-btn.synced {
+      border-color: rgba(0, 240, 144, 0.45);
+      color: var(--mint);
+    }
+
+    .cloud-bar-btn:active {
+      transform: scale(0.98);
+    }
+
+    /* REVEAL LIST */
+    .reveal-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .reveal-item {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-hairline);
+      border-radius: 18px;
+      padding: 11px 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .reveal-item.truth {
+      background: rgba(0, 240, 144, 0.12);
+      border-color: var(--mint);
+    }
+
+    .reveal-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    .reveal-ans {
+      font-size: 14px;
+      font-weight: 800;
+      color: var(--text-primary);
+    }
+
+    .reveal-item.truth .reveal-ans {
+      color: var(--mint);
+    }
+
+    .reveal-tag {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      font-weight: 800;
+      padding: 3px 8px;
+      border-radius: var(--radius-pill);
+      background: var(--bg-surface-2);
+      color: var(--text-secondary);
+      text-transform: uppercase;
+    }
+
+    .reveal-item.truth .reveal-tag {
+      background: var(--mint);
+      color: #07130D;
+    }
+
+    .voter-chips {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .voter-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      background: var(--bg-surface-2);
+      padding: 3px 8px 3px 4px;
+      border-radius: var(--radius-pill);
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--text-secondary);
+    }
+
+    /* BOTTOM SHEETS / MODALS */
+    .sheet-backdrop {
+      position: absolute;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.72);
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
+      z-index: 50;
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;
+      padding: 12px;
+    }
+
+    .sheet-card {
+      width: 100%;
+      max-height: 85dvh;
+      overflow-y: auto;
+      background: var(--bg-surface);
+      border: 1px solid var(--border-strong);
+      border-radius: 28px;
+      padding: 20px 18px calc(18px + env(safe-area-inset-bottom));
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      animation: slideUp 0.22s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+
+    @keyframes slideUp {
+      from { transform: translateY(24px); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+
+    .sheet-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .sheet-title {
+      font-size: 17px;
+      font-weight: 800;
+      margin: 0;
+    }
+
+    .emoji-grid {
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 8px;
+    }
+
+    .emoji-opt {
+      height: 42px;
+      border-radius: 12px;
+      background: var(--bg-surface-2);
+      border: 1px solid var(--border-hairline);
+      font-size: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+    }
+
+    .emoji-opt.active {
+      border-color: var(--mint);
+      background: rgba(0, 240, 144, 0.14);
+    }
+
+    .color-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    .color-swatch {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      border: 2px solid transparent;
+      cursor: pointer;
+    }
+
+    .color-swatch.active {
+      border-color: #FFFFFF;
+      transform: scale(1.12);
+    }
+
+    .field-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .field-group label {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+    }
+
+    .field-input {
+      width: 100%;
+      background: var(--bg-surface-2);
+      border: 1px solid var(--border-hairline);
+      border-radius: 14px;
+      padding: 11px 12px;
+      color: var(--text-primary);
+      font-family: var(--font-mono);
+      font-size: 16px;
+      outline: none;
+      user-select: text;
+      -webkit-user-select: text;
+    }
+
+    .field-input:focus {
+      border-color: var(--mint);
+    }
+
+    .seg-row {
+      display: flex;
+      gap: 6px;
+    }
+
+    .seg-btn {
+      flex: 1;
+      padding: 9px 6px;
+      border-radius: 12px;
+      background: var(--bg-surface-2);
+      border: 1px solid var(--border-hairline);
+      color: var(--text-secondary);
+      font-family: var(--font-mono);
+      font-size: 12px;
+      font-weight: 800;
+      cursor: pointer;
+    }
+
+    .seg-btn.active {
+      background: var(--mint);
+      color: #07130D;
+      border-color: var(--mint);
+    }
+
+    .toast {
+      position: absolute;
+      top: 64px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--bg-surface-3);
+      border: 1px solid var(--border-strong);
+      color: var(--text-primary);
+      padding: 8px 14px;
+      border-radius: var(--radius-pill);
+      font-size: 12px;
+      font-weight: 700;
+      z-index: 80;
+      white-space: nowrap;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    }
+  </style>
+</head>
+<body>
+  <div class="app-shell" id="app"></div>
+
+  <script>
+    // =========================================================================
+    // 0. SUPABASE CLOUD CREDENTIALS (Paste once here so every player auto-syncs)
+    // =========================================================================
+    const SUPABASE_CONFIG = {
+      url: 'https://bvtsdzktjabmdparqfjp.supabase.co',
+      key: 'sb_publishable_Pnj18TalpTRquQoUDQWl0A_gXEGAasu'
+    };
+
+    // =========================================================================
+    // 1. BUILT-IN STARTER FALLBACK DECK (30 verified prompts while offline)
+    // =========================================================================
+    const STARTER_PROMPTS = [{"id": "news_001", "category": "Bizarre News", "prompt": "In March 2025, a Florida jewelry thief tried to hide $769,000 worth of stolen Tiffany earrings from police by ________.", "answer": "SWALLOWING THEM", "accepted_truths": ["SWALLOWING THEM", "EATING THEM", "SWALLOWED THEM", "ATE THEM"], "decoys": ["GLUING THEM TO HIS DOG", "HIDING THEM IN A JAR OF MAYO", "TAPING THEM TO A POLICE CRUISER", "PUTTING THEM IN HIS BELLY BUTTON"], "reveal_note": "Police kept him under hospital supervision for days until the diamonds were recovered through 'natural means.'"}, {"id": "animals_001", "category": "Unhinged Animals", "prompt": "When cornered by a predator, the regal horned lizard defends itself by shooting ________ out of its eyeballs.", "answer": "BLOOD", "accepted_truths": ["BLOOD", "STREAMS OF BLOOD", "FOUL-TASTING BLOOD"], "decoys": ["ACIDIC TEARS", "MILKY VENOM", "TINY BONE SHARDS", "BOILING SALIVA"], "reveal_note": "It restricts blood flow to its head until the pressure ruptures the vessels in its eyelids, firing up to five feet."}, {"id": "disney_nick_001", "category": "Disney & Nick Secrets", "prompt": "According to Double Dare host Marc Summers, the crew named Nickelodeon's iconic green slime 'Gak' after the Philadelphia street slang for ________.", "answer": "HEROIN", "accepted_truths": ["HEROIN", "METH", "COCAINE", "DRUGS"], "decoys": ["VOMIT", "DIARRHEA", "SEWAGE", "CAT HAIRBALLS"], "reveal_note": "The rowdy production crew slipped the drug slang past clueless network executives, who later sold it in toy stores nationwide."}, {"id": "music_001", "category": "Song Origins", "prompt": "Nirvana's anthem 'Smells Like Teen Spirit' got its title after a friend spray-painted on Kurt Cobain's wall that he smelled like a brand of ________.", "answer": "DEODORANT", "accepted_truths": ["DEODORANT", "ANTIPERSPIRANT", "TEEN DEODORANT", "GIRLS DEODORANT"], "decoys": ["CHEAP MALT LIQUOR", "CHEESE PUFFS", "WET DOG", "CAT PISS"], "reveal_note": "Cobain thought the graffiti was a deep poetic compliment—he had no idea 'Teen Spirit' was his girlfriend's antiperspirant."}, {"id": "history_001", "category": "Unhinged History", "prompt": "During the 1950s Cold War, the British military designed a buried nuclear landmine codenamed 'Blue Peacock' that kept its electronics warm using ________.", "answer": "LIVE CHICKENS", "accepted_truths": ["LIVE CHICKENS", "CHICKENS", "HENS"], "decoys": ["A TINY COAL FURNACE", "FERMENTING HORSE MANURE", "BODY HEAT FROM TWO SOLDIERS", "ELECTRIC BLANKETS"], "reveal_note": "The chickens were sealed inside the bomb casing with enough food and water to keep the wiring warm for a week before freezing."}, {"id": "food_001", "category": "Accidental Origins", "prompt": "Nashville Hot Chicken was invented in the 1930s when a woman tried to punish her cheating boyfriend by lacing his fried chicken with ________.", "answer": "CAYENNE PEPPER", "accepted_truths": ["CAYENNE PEPPER", "HOT PEPPERS", "CHILI PEPPERS", "SPICY PEPPERS"], "decoys": ["LAXATIVES", "HORSE RADISH", "GHOST PEPPER EXTRACT", "GASOLINE"], "reveal_note": "Her revenge backfired completely: Thornton Prince loved the spicy chicken so much he opened a restaurant selling it."}, {"id": "laws_001", "category": "Weird Laws", "prompt": "In Los Angeles, California, a 2004 city ordinance strictly bans the sale, possession, or use of ________ in Hollywood on Halloween.", "answer": "SILLY STRING", "accepted_truths": ["SILLY STRING", "AEROSOL STRING", "SPRAY STRING"], "decoys": ["FAKE BLOOD", "EGGS AND TOILET PAPER", "PLASTIC PITCHFORKS", "CLOWN MASKS"], "reveal_note": "The city passed the ban after Halloween Silly String cleanups on Hollywood Boulevard started costing over $200,000 a year."}, {"id": "crime_001", "category": "True Crime", "prompt": "In Silver Springs, Florida, burglars broke into a home, stole three jars they thought contained cocaine, and snorted the contents before realizing it was ________.", "answer": "CREMATED ASHES", "accepted_truths": ["CREMATED ASHES", "HUMAN ASHES", "ASHES", "CREMAINS"], "decoys": ["BAKING SODA", "BABY POWDER", "RAT POISON", "DRYWALL DUST"], "reveal_note": "They had actually snorted the cremated remains of the homeowner's late husband and two dogs."}, {"id": "pop_001", "category": "90s & 2000s Pop Culture", "prompt": "In the 1992 horror film Candyman, actor Tony Todd put real live ________ in his mouth and negotiated a $1,000 bonus for every single time he got stung.", "answer": "BEES", "accepted_truths": ["BEES", "HONEYBEES"], "decoys": ["SCORPIONS", "TARANTULAS", "COCKROACHES", "WASPS"], "reveal_note": "He got stung 27 times during filming and walked away with $27,000 in bonus pay."}, {"id": "sci_001", "category": "Weird Science & Medicine", "prompt": "In the 18th century, European physicians attempted to revive drowning victims by blowing ________ up their rectums.", "answer": "TOBACCO SMOKE", "accepted_truths": ["TOBACCO SMOKE", "SMOKE", "CIGARETTE SMOKE"], "decoys": ["PEPPERMINT OIL", "HOT AIR", "CHAMPAGNE", "LAUGHING GAS"], "reveal_note": "The Royal Humane Society actually stationed bellows-powered 'tobacco smoke enema' resuscitation kits along London's River Thames."}, {"id": "sports_001", "category": "Unhinged Sports Moments", "prompt": "During a 1993 heavyweight title fight between Riddick Bowe and Evander Holyfield in Las Vegas, a man crashed into the ring mid-round while flying a ________.", "answer": "PARAGLIDER", "accepted_truths": ["PARAGLIDER", "PARACHUTE", "POWERED PARAGLIDER"], "decoys": ["HANG GLIDER", "JETPACK", "HOT AIR BALLOON", "ULTRALIGHT PLANE"], "reveal_note": "Nicknamed 'Fan Man,' James Miller tangled his parachute in the stadium lights and got beaten unconscious by Bowe's security team."}, {"id": "games_001", "category": "Video Game Secrets", "prompt": "Angry that Atari refused to credit game designers in 1979, programmer Warren Robinett hid the first video game 'Easter egg' inside Adventure—a secret room displaying ________.", "answer": "HIS NAME", "accepted_truths": ["HIS NAME", "CREATED BY WARREN ROBINETT", "WARREN ROBINETT"], "decoys": ["HIS HOME PHONE NUMBER", "A MIDDLE FINGER", "ATARI'S BANK PASSWORD", "A PICTURE OF PAC-MAN"], "reveal_note": "By the time Atari discovered 'Created by Warren Robinett' hidden inside the cartridge, hundreds of thousands of copies had already shipped."}, {"id": "food_002", "category": "Bizarre Food & Drink", "prompt": "Before becoming a colorful children's candy, PEZ was invented in Austria in 1927 as a peppermint breath mint designed to help adults quit ________.", "answer": "SMOKING", "accepted_truths": ["SMOKING", "CIGARETTES"], "decoys": ["DRINKING", "SWEARING", "BITING THEIR NAILS", "EATING SUGAR"], "reveal_note": "That's why the original PEZ dispenser was shaped just like a pocket cigarette lighter."}, {"id": "celeb_001", "category": "Celebrity Meltdowns & Scandals", "prompt": "In 1999, Austin police arrested actor Matthew McConaughey at 3 a.m. after neighbors complained about him playing the ________ completely naked.", "answer": "BONGOS", "accepted_truths": ["BONGOS", "BONGO DRUMS", "DRUMS"], "decoys": ["BAGPIPES", "ACCORDION", "TROMBONE", "BANJO"], "reveal_note": "Officers arrived to find McConaughey dancing naked in his living room while enthusiastically slapping his bongo drums."}, {"id": "trad_001", "category": "Weird World Traditions", "prompt": "Every March in Nederland, Colorado, thousands gather for 'Frozen Dead Guy Days' to celebrate a deceased Norwegian man preserved in a backyard shed with ________.", "answer": "DRY ICE", "accepted_truths": ["DRY ICE", "ICE"], "decoys": ["PICKLE BRINE", "MAPLE SYRUP", "ANTIFREEZE", "SAWDUST"], "reveal_note": "The town keeps Grandpa Bredo Morstoel packed in 1,600 pounds of dry ice a month and celebrates with coffin races and frozen T-shirt contests."}, {"id": "surv_001", "category": "Unbelievable Survival Stories", "prompt": "In 2003, hiker Aron Ralston survived being pinned by a boulder in a Utah canyon for five days by freeing himself with a dull multi-tool and ________.", "answer": "AMPUTATING HIS OWN ARM", "accepted_truths": ["AMPUTATING HIS OWN ARM", "CUTTING OFF HIS ARM", "CUTTING OFF HIS OWN ARM"], "decoys": ["DIGGING OUT WITH A SPOON", "CHIPPING THE BOULDER IN HALF", "BUILDING A PULLEY OUT OF SHOELACES", "WAITING FOR A FLASH FLOOD"], "reveal_note": "After breaking his own forearm bones against the rock, Ralston used a two-inch pocketknife blade to sever his right arm and hike seven miles out."}, {"id": "inv_001", "category": "Bizarre Inventions & Patents", "prompt": "In 1922, Emma Read patented a suspended chicken-wire 'baby cage' designed to hang outside a high-rise apartment ________ so city infants could get fresh air.", "answer": "WINDOW", "accepted_truths": ["WINDOW", "APARTMENT WINDOW"], "decoys": ["FIRE ESCAPE", "BALCONY RAILING", "CHIMNEY", "CLOTHESLINE"], "reveal_note": "Even First Lady Eleanor Roosevelt reportedly bought one of the hanging wire cages for her daughter in New York City."}, {"id": "corp_001", "category": "Wild Corporate Fails & Brand Blunders", "prompt": "In 1992, Pepsi's 'Number Fever' bottle cap promotion in the Philippines sparked nationwide riots after a computer glitch printed 800,000 winning caps for the number ________.", "answer": "349", "accepted_truths": ["349"], "decoys": ["777", "666", "420", "100"], "reveal_note": "Instead of two grand-prize winners of 1 million pesos each, hundreds of thousands of people held winning 349 caps, costing Pepsi tens of millions in settlements."}, {"id": "space_001", "category": "Space & Cosmic Oddities", "prompt": "During NASA's 1965 Gemini 3 mission, astronaut John Young got reprimanded by Congress after smuggling a ________ inside his spacesuit pocket.", "answer": "CORNED BEEF SANDWICH", "accepted_truths": ["CORNED BEEF SANDWICH", "SANDWICH"], "decoys": ["FLASK OF WHISKEY", "CHEESEBURGER", "SLICE OF PIZZA", "CHOCOLATE CHIP COOKIE"], "reveal_note": "Floating rye bread crumbs threatened to clog the spacecraft's electronics, prompting strict rules against contraband snacks."}, {"id": "art_001", "category": "Unhinged Art & Museum Heists", "prompt": "In 2012, an 81-year-old amateur painter in Borja, Spain tried to restore a peeling church fresco of Jesus, accidentally turning it into a viral ape-like blur nicknamed '________.'", "answer": "MONKEY CHRIST", "accepted_truths": ["MONKEY CHRIST", "POTATO JESUS", "ECCE MONO"], "decoys": ["CAVEMAN JESUS", "FUZZY SAVIOR", "CLOWN CHRIST", "BEAR JESUS"], "reveal_note": "Cecilia Giménez's botched restoration became an international sensation and drew tens of thousands of paying tourists to the tiny Spanish town."}, {"id": "royal_001", "category": "Bizarre Royal & Political Shenanigans", "prompt": "In 1837, outgoing U.S. President Andrew Jackson invited the public into the White House lobby to eat a 1,400-pound wheel of ________, leaving the carpets reeking for months.", "answer": "CHEDDAR CHEESE", "accepted_truths": ["CHEDDAR CHEESE", "CHEESE"], "decoys": ["ROAST BEEF", "BUTTER", "FRUITCAKE", "PICKLED HERRING"], "reveal_note": "Thousands of visitors devoured the four-foot-wide cheese wheel in two hours, stomping chunks deep into the White House rugs."}, {"id": "urban_001", "category": "Urban Legends Turned Real", "prompt": "In 1976, a TV crew filming The Six Million Dollar Man inside a California funhouse snapped off a wax dummy's arm, revealing the mummified corpse of a 1911 ________.", "answer": "OUTLAW", "accepted_truths": ["OUTLAW", "TRAIN ROBBER", "BANK ROBBER", "BANDIT"], "decoys": ["CIRCUS CLOWN", "PIRATE", "GOLD PROSPECTOR", "MAGICIAN"], "reveal_note": "The prop was actually the preserved body of train robber Elmer McCurdy, which had been passed around carnivals for 65 years."}, {"id": "news_002", "category": "Bizarre News", "prompt": "In November 2025, staff at a Buddhist temple in Thailand were shocked when a 65-year-old woman declared dead two days earlier suddenly ________.", "answer": "KNOCKED ON HER COFFIN", "accepted_truths": ["KNOCKED ON HER COFFIN", "WOKE UP IN HER COFFIN", "KNOCKED FROM INSIDE THE COFFIN", "WOKE UP"], "decoys": ["SAT UP AND ASKED FOR WATER", "STARTED SNORING LOUDLY", "ANSWERED HER CELL PHONE", "BIT THE FUNERAL DIRECTOR"], "reveal_note": "She woke up in the back of a pickup truck right before her cremation ceremony began."}, {"id": "animals_002", "category": "Unhinged Animals", "prompt": "A marine parasite called Cymothoa exigua sneaks into a fish's gills, destroys its tongue, and then ________.", "answer": "BECOMES ITS NEW TONGUE", "accepted_truths": ["BECOMES ITS NEW TONGUE", "REPLACES ITS TONGUE", "ACTS AS ITS TONGUE"], "decoys": ["STEERS THE FISH LIKE A SUBMARINE", "LIVES INSIDE ITS EYEBALL", "LAYS EGGS IN ITS BRAIN", "MAKES THE FISH GLOW IN THE DARK"], "reveal_note": "The fish continues using the living parasite to swallow food for the rest of its life."}, {"id": "disney_nick_002", "category": "Disney & Nick Secrets", "prompt": "In the original pilot pitch for SpongeBob SquarePants, Patrick Star was written as an angry, bitter ________.", "answer": "BAR OWNER", "accepted_truths": ["BAR OWNER", "TAVERN OWNER", "BARTENDER", "DIVORCED DAD"], "decoys": ["USED CAR SALESMAN", "TAX AUDITOR", "PRISON WARDEN", "FAILED STAND-UP COMEDIAN"], "reveal_note": "Creator Stephen Hillenburg originally designed Patrick with a massive chip on his shoulder because he was pink."}, {"id": "music_002", "category": "Song Origins", "prompt": "Van Halen's upbeat 1984 hit 'Jump' was inspired by David Lee Roth watching a TV news report about a man ________.", "answer": "THREATENING TO JUMP OFF A BUILDING", "accepted_truths": ["THREATENING TO JUMP OFF A BUILDING", "ABOUT TO COMMIT SUICIDE", "JUMPING OFF A BUILDING", "ON A LEDGE"], "decoys": ["TRYING TO LEAP OVER A MOVING BUS", "ESCAPING PRISON ON A POGO STICK", "BUNGEE JUMPING WITHOUT A CORD", "JUMPING INTO A TANK OF SHARKS"], "reveal_note": "Roth imagined someone in the crowd below yelling 'Go ahead and jump!' and turned the dark thought into a synth-pop anthem."}, {"id": "history_002", "category": "Unhinged History", "prompt": "In 1910, a Louisiana congressman tried to solve America's meat shortage by proposing we import and farm hippos, marketing the meat as ________.", "answer": "LAKE COW BACON", "accepted_truths": ["LAKE COW BACON", "SWAMP BACON", "RIVER PORK"], "decoys": ["BAYOU BEEF", "WATER HAM", "JUNGLE VEAL", "FAT MAN STEAK"], "reveal_note": "The 'Hippo Bill' fell just short of passing, narrowly saving Louisiana bayous from an invasive hippo apocalypse."}, {"id": "facts_001", "category": "Accidental Origins", "prompt": "Nintendo was originally founded in Kyoto, Japan in 1889—the same year Jack the Ripper was active in London—as a company that made ________.", "answer": "PLAYING CARDS", "accepted_truths": ["PLAYING CARDS", "HANAFUDA CARDS", "CARDS"], "decoys": ["RICE COOKERS", "SAMURAI SWORDS", "BICYCLES", "SOY SAUCE"], "reveal_note": "Nintendo spent decades making handmade hanafuda cards—and even ran a love hotel chain—before entering video games."}, {"id": "laws_002", "category": "Weird Laws", "prompt": "Under Illinois Compiled Statutes, it is legally a felony to possess more than $300 worth of ________.", "answer": "SALAMANDERS", "accepted_truths": ["SALAMANDERS", "WILD SALAMANDERS"], "decoys": ["STOLEN TRAFFIC CONES", "UNTAXED CHEESE", "EXPIRED COUPONS", "FERRETS"], "reveal_note": "Illinois wildlife trafficking laws classify possessing over $300 of protected amphibians like salamanders as a Class 3 felony."}, {"id": "crime_002", "category": "True Crime", "prompt": "After a robbery went wrong at a Lowe's in Florida, suspect Milton Hodges fled across the street, hopped a fence, and tried to blend in at a ________.", "answer": "NUDIST RESORT", "accepted_truths": ["NUDIST RESORT", "NUDIST COLONY", "CLOTHING-OPTIONAL RESORT"], "decoys": ["MIDDLE SCHOOL", "WEDDING RECEPTION", "POLICE BARBECUE", "CLOWN CONVENTION"], "reveal_note": "Deputies spotted him immediately at Cypress Cove Nudist Resort because he was the only person wearing clothes."}];
+
+    const CARD_THEMES = [
+      { bg: '#00F090', ink: '#07130D', name: 'mint' },
+      { bg: '#5B73F8', ink: '#090B1A', name: 'indigo' },
+      { bg: '#FBBF24', ink: '#171103', name: 'amber' },
+      { bg: '#FF6B6B', ink: '#1A0707', name: 'coral' }
+    ];
+
+    const AVATAR_EMOJIS = [
+      '🦊','🐸','🐙','🦄','👾','🤖',
+      '👻','🦖','🦈','🦩','🐝','🍄',
+      '🔥','⚡','🍕','🌮','🪩','🎲',
+      '🧠','👀','💀','👑','🚀','🌵'
+    ];
+
+    const AVATAR_COLORS = [
+      '#00F090', '#5B73F8', '#FBBF24', '#FF6B6B',
+      '#A855F7', '#06B6D4', '#F97316', '#EC4899'
+    ];
+
+    const STORAGE_KEYS = {
+      SUPABASE_CFG: 'bluff_deck_supabase_cfg_v1',
+      SUPABASE_CACHE: 'bluff_deck_supabase_cache_v1'
+    };
+
+    // =========================================================================
+    // 2. CENTRALIZED APPLICATION STATE
+    // =========================================================================
+    const state = {
+      phase: 'LOBBY', // LOBBY | PASS_BLUFF | BLUFF_INPUT | PASS_VOTE | VOTING | REVEAL | PODIUM
+      players: [
+        { id: 'p1', name: 'Player 1', avatarType: 'emoji', avatarValue: '🦊', avatarColor: '#00F090', score: 0 },
+        { id: 'p2', name: 'Player 2', avatarType: 'emoji', avatarValue: '🐙', avatarColor: '#5B73F8', score: 0 }
+      ],
+      settings: {
+        totalRounds: 5,
+        timerSeconds: 45,
+        soundEnabled: true
+      },
+      allPrompts: [...STARTER_PROMPTS],
+      deckSource: 'STARTER', // STARTER | SUPABASE
+      shuffledDeck: [],
+      deckCursor: 0,
+      roundIndex: 0,
+      activePlayerIndex: 0,
+      currentPrompt: null,
+      bluffs: {}, // { playerId: { text } }
+      decoyCursor: 0,
+      draftBluff: '',
+      voteOptions: [], // [{ id, text, authorId, isTruth, isHouseDecoy }]
+      votes: {}, // { voterId: optionId }
+      selectedOptionId: null,
+      modal: null, // null | 'MENU' | 'HELP' | 'SETTINGS' | 'AVATAR' | 'SUPABASE'
+      editingPlayerId: null,
+      supabaseConfig: { url: SUPABASE_CONFIG.url, key: SUPABASE_CONFIG.key },
+      supabaseSyncing: false,
+      toastMessage: null,
+      timesUpFlash: false
+    };
+
+    // =========================================================================
+    // 3. IPHONE PWA ICON INJECTOR
+    // =========================================================================
+    function initApplePWA() {
+      try {
+        const canvas = document.createElement('canvas');
+        canvas.width = 180;
+        canvas.height = 180;
+        const ctx = canvas.getContext('2d');
+        ctx.fillStyle = '#09090B';
+        ctx.fillRect(0, 0, 180, 180);
+
+        const colors = ['#00F090', '#5B73F8', '#FBBF24', '#FF6B6B'];
+        const letters = ['B', 'L', 'F', 'F'];
+        const coords = [[28, 28], [96, 28], [28, 96], [96, 96]];
+
+        coords.forEach(([x, y], i) => {
+          ctx.fillStyle = colors[i];
+          ctx.beginPath();
+          ctx.roundRect(x, y, 56, 56, 14);
+          ctx.fill();
+          ctx.fillStyle = '#09090B';
+          ctx.font = '800 28px monospace';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText(letters[i], x + 28, y + 30);
+        });
+
+        const iconUrl = canvas.toDataURL('image/png');
+        const link = document.createElement('link');
+        link.rel = 'apple-touch-icon';
+        link.href = iconUrl;
+        document.head.appendChild(link);
+      } catch (e) {}
+    }
+
+    // =========================================================================
+    // 4. WEB AUDIO TENSION & FEEDBACK SYNTHESIZER
+    // =========================================================================
+    let audioCtx = null;
+    function playTone(freq = 440, duration = 0.08, type = 'sine', gainVal = 0.06) {
+      if (!state.settings.soundEnabled) return;
+      try {
+        if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = type;
+        osc.frequency.value = freq;
+        gain.gain.setValueAtTime(gainVal, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + duration);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start();
+        osc.stop(audioCtx.currentTime + duration);
+      } catch (e) {}
+    }
+
+    // =========================================================================
+    // 5. DECK RANDOMIZATION & TRUTH-GUARD HELPERS
+    // =========================================================================
+    function fisherYatesShuffle(arr) {
+      const copy = [...arr];
+      for (let i = copy.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [copy[i], copy[j]] = [copy[j], copy[i]];
+      }
+      return copy;
+    }
+
+    function normalizeText(str) {
+      return (str || '')
+        .toUpperCase()
+        .replace(/[^A-Z0-9\s]/g, '')
+        .replace(/\b(A|AN|THE)\b/g, '')
+        .replace(/\s+/g, ' ')
+        .trim();
+    }
+
+    function isTooCloseToTruth(input, promptObj) {
+      const norm = normalizeText(input);
+      if (!norm || !promptObj) return false;
+      const truths = [promptObj.answer, ...(promptObj.accepted_truths || [])].map(normalizeText);
+      return truths.some(t => t && (norm === t || (norm.length >= 4 && t.includes(norm)) || (t.length >= 4 && norm.includes(t))));
+    }
+
+    function showToast(msg) {
+      state.toastMessage = msg;
+      render();
+      clearTimeout(window.__toastTimer);
+      window.__toastTimer = setTimeout(() => {
+        state.toastMessage = null;
+        render();
+      }, 2600);
+    }
+
+    // =========================================================================
+    // 6. 60FPS DRAMATIC COUNTDOWN ENGINE
+    // =========================================================================
+    let countdownRaf = null;
+    let countdownEnd = 0;
+    let countdownTotalMs = 0;
+    let lastTickSecond = null;
+
+    function stopCountdown() {
+      if (countdownRaf) cancelAnimationFrame(countdownRaf);
+      countdownRaf = null;
+      lastTickSecond = null;
+    }
+
+    function startCountdown(onExpire) {
+      stopCountdown();
+      const secs = state.settings.timerSeconds;
+      if (!secs || secs <= 0) {
+        updateTimerDOM(null, 1);
+        return;
+      }
+      countdownTotalMs = secs * 1000;
+      countdownEnd = performance.now() + countdownTotalMs;
+      lastTickSecond = secs;
+
+      function frame(now) {
+        const remainingMs = Math.max(0, countdownEnd - now);
+        const remainingSec = Math.ceil(remainingMs / 1000);
+        const ratio = remainingMs / countdownTotalMs;
+
+        updateTimerDOM(remainingSec, ratio);
+
+        if (remainingSec !== lastTickSecond && remainingSec > 0 && remainingSec <= 5) {
+          playTone(remainingSec === 1 ? 880 : 620, 0.09, 'triangle', 0.08);
+          const giantEl = document.getElementById('giantCountdown');
+          if (giantEl) {
+            giantEl.textContent = remainingSec;
+            giantEl.style.display = 'block';
+          }
+        }
+        lastTickSecond = remainingSec;
+
+        if (remainingMs <= 0) {
+          stopCountdown();
+          playTone(220, 0.28, 'sawtooth', 0.09);
+          onExpire();
+          return;
+        }
+        countdownRaf = requestAnimationFrame(frame);
+      }
+
+      countdownRaf = requestAnimationFrame(frame);
+    }
+
+    function updateTimerDOM(sec, ratio) {
+      const pill = document.getElementById('timerPill');
+      const fill = document.getElementById('timerFill');
+      const text = document.getElementById('timerText');
+      if (!pill || !fill || !text) return;
+
+      if (sec === null) {
+        pill.className = 'timer-pill';
+        fill.style.transform = 'scaleX(1)';
+        text.textContent = '∞';
+        return;
+      }
+
+      const mm = String(Math.floor(sec / 60)).padStart(2, '0');
+      const ss = String(sec % 60).padStart(2, '0');
+      text.textContent = `${mm}:${ss}`;
+      fill.style.transform = `scaleX(${Math.max(0, Math.min(1, ratio))})`;
+
+      pill.classList.remove('warn', 'danger');
+      if (sec <= 5) pill.classList.add('danger');
+      else if (sec <= 10) pill.classList.add('warn');
+    }
+
+    // =========================================================================
+    // 7. SUPABASE CLOUD SYNC & CACHE HYDRATION
+    // =========================================================================
+    function hydrateFromStorage() {
+      try {
+        if (SUPABASE_CONFIG.url && SUPABASE_CONFIG.key) {
+          state.supabaseConfig = {
+            url: SUPABASE_CONFIG.url.trim(),
+            key: SUPABASE_CONFIG.key.trim()
+          };
+        } else {
+          const savedCfg = JSON.parse(localStorage.getItem(STORAGE_KEYS.SUPABASE_CFG) || 'null');
+          if (savedCfg && savedCfg.url && savedCfg.key) {
+            state.supabaseConfig = savedCfg;
+          }
+        }
+
+        const cachedCloud = JSON.parse(localStorage.getItem(STORAGE_KEYS.SUPABASE_CACHE) || 'null');
+        if (Array.isArray(cachedCloud) && cachedCloud.length > 0) {
+          state.allPrompts = cachedCloud;
+          state.deckSource = 'SUPABASE';
+        }
+      } catch (e) {}
+    }
+
+    async function syncFromSupabase(silent = false) {
+      const url = (state.supabaseConfig.url || '').trim();
+      const key = (state.supabaseConfig.key || '').trim();
+      if (!url || !key) {
+        if (!silent) showToast('Enter Project URL & Publishable Key');
+        return;
+      }
+      if (!window.supabase || !window.supabase.createClient) {
+        if (!silent) showToast('Supabase SDK offline — using cached deck');
+        return;
+      }
+
+      state.supabaseSyncing = true;
+      render();
+
+      try {
+        const client = window.supabase.createClient(url, key);
+        const { data, error } = await client
+          .from('prompts')
+          .select('id, category, prompt, answer, accepted_truths, decoys, reveal_note')
+          .eq('is_active', true);
+
+        if (error) throw error;
+        if (!data || data.length === 0) throw new Error('No active prompts found in table');
+
+        state.allPrompts = data;
+        state.deckSource = 'SUPABASE';
+        state.shuffledDeck = fisherYatesShuffle(data);
+        state.deckCursor = 0;
+
+        localStorage.setItem(STORAGE_KEYS.SUPABASE_CFG, JSON.stringify({ url, key }));
+        localStorage.setItem(STORAGE_KEYS.SUPABASE_CACHE, JSON.stringify(data));
+
+        state.modal = null;
+        if (!silent) showToast(`Synced ${data.length} prompts from Supabase!`);
+      } catch (err) {
+        if (!silent) showToast(`Sync failed: ${err.message || 'Check credentials'}`);
+      } finally {
+        state.supabaseSyncing = false;
+        render();
+      }
+    }
+
+    // =========================================================================
+    // 8. GAME FLOW CONTROLLERS
+    // =========================================================================
+    function startGame() {
+      state.players.forEach((p, idx) => {
+        p.score = 0;
+        if (!p.name.trim()) p.name = `Player ${idx + 1}`;
+      });
+      if (state.shuffledDeck.length === 0 || state.deckCursor + state.settings.totalRounds > state.shuffledDeck.length) {
+        state.shuffledDeck = fisherYatesShuffle(state.allPrompts);
+        state.deckCursor = 0;
+      }
+      state.roundIndex = 0;
+      beginRound();
+    }
+
+    function beginRound() {
+      if (state.deckCursor >= state.shuffledDeck.length) {
+        state.shuffledDeck = fisherYatesShuffle(state.allPrompts);
+        state.deckCursor = 0;
+      }
+      state.currentPrompt = state.shuffledDeck[state.deckCursor++];
+      state.bluffs = {};
+      state.votes = {};
+      state.activePlayerIndex = 0;
+      state.decoyCursor = 0;
+      state.draftBluff = '';
+      state.selectedOptionId = null;
+
+      if (state.players.length === 1) {
+        enterBluffInput();
+      } else {
+        state.phase = 'PASS_BLUFF';
+        stopCountdown();
+        render();
+      }
+    }
+
+    function enterBluffInput() {
+      state.phase = 'BLUFF_INPUT';
+      state.draftBluff = '';
+      state.decoyCursor = 0;
+      state.timesUpFlash = false;
+      render();
+      startCountdown(() => {
+        state.timesUpFlash = true;
+        render();
+        setTimeout(() => {
+          state.timesUpFlash = false;
+          if (!state.draftBluff.trim() || isTooCloseToTruth(state.draftBluff, state.currentPrompt)) {
+            useDecoy();
+          }
+          submitBluff(true);
+        }, 700);
+      });
+    }
+
+    function useDecoy() {
+      const decoys = state.currentPrompt?.decoys || ['SOMETHING COMPLETELY UNEXPECTED'];
+      const pick = decoys[state.decoyCursor % decoys.length];
+      state.decoyCursor++;
+      state.draftBluff = pick;
+      playTone(540, 0.06, 'sine', 0.06);
+      render();
+    }
+
+    function submitBluff(forced = false) {
+      const player = state.players[state.activePlayerIndex];
+      const cleaned = state.draftBluff.trim().toUpperCase();
+      if (!cleaned) return;
+      if (!forced && isTooCloseToTruth(cleaned, state.currentPrompt)) {
+        playTone(200, 0.14, 'sawtooth', 0.07);
+        return;
+      }
+
+      stopCountdown();
+      playTone(680, 0.09, 'sine', 0.07);
+      state.bluffs[player.id] = { text: cleaned };
+
+      if (state.activePlayerIndex + 1 < state.players.length) {
+        state.activePlayerIndex++;
+        state.phase = 'PASS_BLUFF';
+        render();
+      } else {
+        prepareVotingBoard();
+      }
+    }
+
+    function prepareVotingBoard() {
+      const options = [];
+      const seenNormalized = new Set();
+
+      const addOption = (opt) => {
+        const norm = normalizeText(opt.text);
+        if (!norm || seenNormalized.has(norm)) return;
+        seenNormalized.add(norm);
+        options.push(opt);
+      };
+
+      // 1. Real Truth
+      addOption({
+        id: 'truth',
+        text: state.currentPrompt.answer.toUpperCase(),
+        authorId: null,
+        isTruth: true,
+        isHouseDecoy: false
+      });
+
+      // 2. Player Bluffs
+      state.players.forEach(p => {
+        const b = state.bluffs[p.id];
+        if (b && b.text) {
+          addOption({
+            id: `bluff_${p.id}`,
+            text: b.text.toUpperCase(),
+            authorId: p.id,
+            isTruth: false,
+            isHouseDecoy: false
+          });
+        }
+      });
+
+      // 3. Pad with House Decoys up to at least 4 cards
+      const houseDecoys = fisherYatesShuffle(state.currentPrompt.decoys || []);
+      for (let i = 0; i < houseDecoys.length && options.length < 4; i++) {
+        addOption({
+          id: `house_${i}`,
+          text: houseDecoys[i].toUpperCase(),
+          authorId: null,
+          isTruth: false,
+          isHouseDecoy: true
+        });
+      }
+
+      state.voteOptions = fisherYatesShuffle(options);
+      state.activePlayerIndex = 0;
+      state.selectedOptionId = null;
+
+      if (state.players.length === 1) {
+        enterVoting();
+      } else {
+        state.phase = 'PASS_VOTE';
+        stopCountdown();
+        render();
+      }
+    }
+
+    function enterVoting() {
+      state.phase = 'VOTING';
+      state.selectedOptionId = null;
+      state.timesUpFlash = false;
+      render();
+      startCountdown(() => {
+        state.timesUpFlash = true;
+        render();
+        setTimeout(() => {
+          state.timesUpFlash = false;
+          const voter = state.players[state.activePlayerIndex];
+          const valid = state.voteOptions.filter(o => o.authorId !== voter.id);
+          if (valid.length > 0 && !state.selectedOptionId) {
+            state.selectedOptionId = valid[Math.floor(Math.random() * valid.length)].id;
+          }
+          submitVote();
+        }, 700);
+      });
+    }
+
+    function submitVote() {
+      if (!state.selectedOptionId) return;
+      stopCountdown();
+      playTone(740, 0.09, 'sine', 0.07);
+      const voter = state.players[state.activePlayerIndex];
+      state.votes[voter.id] = state.selectedOptionId;
+
+      if (state.activePlayerIndex + 1 < state.players.length) {
+        state.activePlayerIndex++;
+        state.phase = 'PASS_VOTE';
+        render();
+      } else {
+        scoreRound();
+      }
+    }
+
+    function scoreRound() {
+      stopCountdown();
+      state.players.forEach(voter => {
+        const pickedId = state.votes[voter.id];
+        const chosenOpt = state.voteOptions.find(o => o.id === pickedId);
+        if (!chosenOpt) return;
+        if (chosenOpt.isTruth) {
+          voter.score += 1000;
+        } else if (chosenOpt.authorId) {
+          const author = state.players.find(p => p.id === chosenOpt.authorId);
+          if (author && author.id !== voter.id) {
+            author.score += 500;
+          }
+        }
+      });
+      state.phase = 'REVEAL';
+      playTone(523.25, 0.12, 'triangle', 0.08);
+      setTimeout(() => playTone(659.25, 0.16, 'triangle', 0.08), 110);
+      render();
+    }
+
+    function advanceAfterReveal() {
+      if (state.roundIndex + 1 < state.settings.totalRounds) {
+        state.roundIndex++;
+        beginRound();
+      } else {
+        state.phase = 'PODIUM';
+        render();
+      }
+    }
+
+    // =========================================================================
+    // 9. UI RENDERING HELPERS
+    // =========================================================================
+    function getActiveTheme() {
+      return CARD_THEMES[state.roundIndex % CARD_THEMES.length];
+    }
+
+    function renderAvatar(player, size = 28) {
+      const label = player.avatarType === 'initials'
+        ? (player.name || 'P').trim().slice(0, 2).toUpperCase()
+        : (player.avatarValue || '🦊');
+      const fontSize = player.avatarType === 'initials' ? Math.round(size * 0.42) : Math.round(size * 0.54);
+      return `<span class="avatar-circle" style="width:${size}px;height:${size}px;background:${player.avatarColor};font-size:${fontSize}px;">${escapeHtml(label)}</span>`;
+    }
+
+    function formatPromptHtml(promptText, filledWord = null) {
+      const safe = escapeHtml(promptText || '');
+      const slot = filledWord
+        ? `<span class="blank-slot">${escapeHtml(filledWord)}</span>`
+        : `<span class="blank-slot">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>`;
+      return safe.replace(/_{3,}/g, slot);
+    }
+
+    function escapeHtml(str) {
+      return String(str || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    }
+
+    function renderTopBar() {
+      const showTimer = state.phase === 'BLUFF_INPUT' || state.phase === 'VOTING';
+      const initialTimerText = showTimer
+        ? (state.settings.timerSeconds > 0 ? `00:${String(state.settings.timerSeconds).padStart(2, '0')}` : '∞')
+        : 'READY';
+
+      return `
+        <header class="top-bar">
+          <div class="top-left">
+            <button class="icon-circle" onclick="openModal('MENU')" aria-label="Menu">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round">
+                <line x1="4" y1="7" x2="20" y2="7"></line>
+                <line x1="4" y1="12" x2="20" y2="12"></line>
+                <line x1="4" y1="17" x2="20" y2="17"></line>
+              </svg>
+            </button>
+            <div class="mini-brand" onclick="openModal('MENU')" title="BLUFF // DECK">
+              <div class="mini-tile" style="background:#00F090;">B</div>
+              <div class="mini-tile" style="background:#FBBF24;">L</div>
+              <div class="mini-tile" style="background:#5B73F8;">F</div>
+              <div class="mini-tile" style="background:#EC4899;">F</div>
+            </div>
+          </div>
+
+          <div class="timer-pill" id="timerPill">
+            <div class="timer-fill" id="timerFill"></div>
+            <span class="timer-text" id="timerText">${initialTimerText}</span>
+          </div>
+
+          <div class="top-right">
+            <button class="icon-circle" onclick="openModal('HELP')" aria-label="Help">
+              <span style="font-family:var(--font-mono);font-weight:800;font-size:14px;">?</span>
+            </button>
+            <button class="icon-circle" onclick="openModal('SETTINGS')" aria-label="Settings">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="3"></circle>
+                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+              </svg>
+            </button>
+          </div>
+        </header>
+      `;
+    }
+
+    function renderLobby() {
+      const isSynced = state.deckSource === 'SUPABASE';
+      const sourceLabel = state.supabaseSyncing
+        ? 'SYNCING CLOUD...'
+        : isSynced
+          ? `CLOUD: ${state.allPrompts.length} PROMPTS`
+          : `STARTER: ${state.allPrompts.length} PROMPTS`;
+
+      const cloudBtnTitle = state.supabaseSyncing
+        ? 'Syncing with Supabase...'
+        : isSynced
+          ? `Supabase Synced (${state.allPrompts.length} Prompts)`
+          : 'Connect Supabase Cloud';
+
+      const cloudBtnAction = isSynced
+        ? 'syncFromSupabase(false)'
+        : "openModal('SUPABASE')";
+
+      return `
+        <div class="stage">
+          <section class="hero-card" style="flex:0.82;min-height:205px;">
+            <div class="hero-header">
+              <span class="round-chip">${state.players.length === 1 ? '1P SOLO' : `${state.players.length} PLAYERS`}</span>
+              <span class="topic-pill">RANDOM DECK</span>
+            </div>
+            <div class="hero-body">
+              <h1 class="prompt-text" style="font-size:28px;letter-spacing:-0.03em;">BLUFF // DECK</h1>
+              <p style="margin:8px 0 0;font-size:13px;font-weight:700;opacity:0.82;max-width:290px;">
+                Write a believable lie to fill the blank. Fool your friends—or spot the real truth.
+              </p>
+              <div class="lobby-status-row">
+                <span class="status-badge">
+                  <span class="status-dot"></span>
+                  ${sourceLabel}
+                </span>
+                <span class="status-badge">${state.settings.totalRounds} ROUNDS</span>
+              </div>
+            </div>
+          </section>
+
+          <section class="lower-deck">
+            <div class="player-list">
+              ${state.players.map((p, idx) => `
+                <div class="player-row">
+                  <button style="background:none;border:none;padding:0;cursor:pointer;" onclick="openAvatarStudio('${p.id}')" title="Customize Avatar">
+                    ${renderAvatar(p, 36)}
+                  </button>
+                  <input
+                    class="player-name-input"
+                    value="${escapeHtml(p.name)}"
+                    maxlength="16"
+                    placeholder="Player ${idx + 1}"
+                    oninput="updatePlayerName('${p.id}', this.value)"
+                  />
+                  <button class="chip-action" onclick="openAvatarStudio('${p.id}')">Avatar</button>
+                  ${state.players.length > 1 ? `<button class="chip-action" onclick="removePlayer('${p.id}')">✕</button>` : ''}
+                </div>
+              `).join('')}
+            </div>
+
+            <button class="cloud-bar-btn ${isSynced ? 'synced' : ''}" onclick="${cloudBtnAction}">
+              <span style="display:flex;align-items:center;gap:8px;">
+                <span>☁️</span>
+                <span>${cloudBtnTitle}</span>
+              </span>
+              <span style="font-family:var(--font-mono);font-size:11px;opacity:0.8;">
+                ${isSynced ? 'REFRESH ↻' : 'CONFIGURE →'}
+              </span>
+            </button>
+          </section>
+
+          <div class="bottom-dock">
+            <button class="dock-pill-btn" onclick="addPlayer()" ${state.players.length >= 8 ? 'disabled' : ''}>
+              + PLAYER
+            </button>
+            <button class="confirm-btn ready" onclick="startGame()">
+              Start Shuffled Game
+            </button>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderPassCurtain(mode) {
+      const player = state.players[state.activePlayerIndex];
+      const actionLabel = mode === 'PASS_BLUFF' ? 'write their bluff' : 'cast their vote';
+      return `
+        <div class="stage">
+          <section class="hero-card" style="flex:1;">
+            <div class="hero-header">
+              <span class="round-chip">${state.roundIndex + 1}/${state.settings.totalRounds}</span>
+              <span class="topic-pill">${escapeHtml(state.currentPrompt.category)}</span>
+            </div>
+            <div class="hero-body" style="gap:14px;">
+              ${renderAvatar(player, 74)}
+              <h2 class="prompt-text" style="font-size:26px;">Pass to ${escapeHtml(player.name)}</h2>
+              <p style="margin:0;font-size:14px;font-weight:700;opacity:0.82;">
+                No peeking! Hand the screen over so ${escapeHtml(player.name)} can ${actionLabel}.
+              </p>
+            </div>
+          </section>
+
+          <div class="bottom-dock">
+            <button class="confirm-btn ready" onclick="${mode === 'PASS_BLUFF' ? 'enterBluffInput()' : 'enterVoting()'}">
+              I'm ${escapeHtml(player.name)} — Ready
+            </button>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderBluffInput() {
+      const player = state.players[state.activePlayerIndex];
+      const tooClose = isTooCloseToTruth(state.draftBluff, state.currentPrompt);
+      const isReady = state.draftBluff.trim().length > 0 && !tooClose;
+
+      return `
+        <div class="stage">
+          <section class="hero-card">
+            <div class="hero-header">
+              <span class="round-chip">${state.roundIndex + 1}/${state.settings.totalRounds}</span>
+              <span class="topic-pill">${escapeHtml(state.currentPrompt.category)}</span>
+              <span class="player-turn-chip">
+                ${renderAvatar(player, 20)}
+                <span>${escapeHtml(player.name)}</span>
+              </span>
+            </div>
+            <div class="hero-body">
+              <p class="prompt-text">${formatPromptHtml(state.currentPrompt.prompt, state.draftBluff.trim())}</p>
+            </div>
+            <div class="giant-countdown" id="giantCountdown" style="display:none;">5</div>
+            ${state.timesUpFlash ? `<div class="timesup-overlay">TIME'S UP!</div>` : ''}
+          </section>
+
+          <section class="lower-deck" style="flex:0.72;">
+            <div class="input-card">
+              <div class="input-label-row">
+                <span>Your Lie / Fill-In</span>
+                <span>${state.draftBluff.length}/48</span>
+              </div>
+              <input
+                id="bluffTextInput"
+                class="bluff-input"
+                type="text"
+                maxlength="48"
+                autocomplete="off"
+                autocorrect="off"
+                spellcheck="false"
+                placeholder="Type a convincing lie..."
+                value="${escapeHtml(state.draftBluff)}"
+                oninput="handleBluffTyping(this.value)"
+                onkeydown="if(event.key==='Enter') submitBluff()"
+              />
+              ${tooClose ? `<div class="truth-warning">⚠️ Too close to the real answer! Write a fake lie instead.</div>` : ''}
+            </div>
+          </section>
+
+          <div class="bottom-dock">
+            <button class="dock-pill-btn ${state.decoyCursor > 0 ? 'active-decoy' : ''}" onclick="useDecoy()" title="Insert a pre-written decoy lie">
+              🎲 DECOY
+            </button>
+            <button id="confirmBluffBtn" class="confirm-btn ${isReady ? 'ready' : ''}" onclick="submitBluff()" ${isReady ? '' : 'disabled'}>
+              Confirm
+            </button>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderVoting() {
+      const voter = state.players[state.activePlayerIndex];
+      const keys = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
+
+      return `
+        <div class="stage">
+          <section class="hero-card" style="flex:0.92;min-height:210px;">
+            <div class="hero-header">
+              <span class="round-chip">${state.roundIndex + 1}/${state.settings.totalRounds}</span>
+              <span class="topic-pill">${escapeHtml(state.currentPrompt.category)}</span>
+              <span class="player-turn-chip">
+                ${renderAvatar(voter, 20)}
+                <span>${escapeHtml(voter.name)}</span>
+              </span>
+            </div>
+            <div class="hero-body">
+              <p class="prompt-text">${formatPromptHtml(state.currentPrompt.prompt)}</p>
+            </div>
+            <div class="giant-countdown" id="giantCountdown" style="display:none;">5</div>
+            ${state.timesUpFlash ? `<div class="timesup-overlay">TIME'S UP!</div>` : ''}
+          </section>
+
+          <section class="lower-deck">
+            <div class="vote-grid">
+              ${state.voteOptions.map((opt, idx) => {
+                const isOwn = opt.authorId === voter.id;
+                const isSel = state.selectedOptionId === opt.id;
+                return `
+                  <button
+                    class="vote-tile ${isSel ? 'selected' : ''} ${isOwn ? 'disabled' : ''}"
+                    onclick="${isOwn ? '' : `selectVoteOption('${opt.id}')`}"
+                    ${isOwn ? 'disabled' : ''}
+                  >
+                    <span>${escapeHtml(opt.text)}</span>
+                    <span class="tile-key">${isOwn ? 'YOUR LIE' : (keys[idx] || idx + 1)}</span>
+                  </button>
+                `;
+              }).join('')}
+            </div>
+          </section>
+
+          <div class="bottom-dock">
+            <button class="confirm-btn ${state.selectedOptionId ? 'ready' : ''}" onclick="submitVote()" ${state.selectedOptionId ? '' : 'disabled'}>
+              Confirm
+            </button>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderReveal() {
+      const truthOpt = state.voteOptions.find(o => o.isTruth);
+      const isLast = state.roundIndex + 1 >= state.settings.totalRounds;
+
+      return `
+        <div class="stage">
+          <section class="hero-card" style="flex:0.78;min-height:185px;">
+            <div class="hero-header">
+              <span class="round-chip">REVEAL ${state.roundIndex + 1}/${state.settings.totalRounds}</span>
+              <span class="topic-pill">${escapeHtml(state.currentPrompt.category)}</span>
+            </div>
+            <div class="hero-body" style="gap:8px;">
+              <p class="prompt-text" style="font-size:18px;">${formatPromptHtml(state.currentPrompt.prompt, truthOpt?.text)}</p>
+              ${state.currentPrompt.reveal_note ? `<p style="margin:0;font-size:12px;font-weight:700;opacity:0.84;max-width:340px;">${escapeHtml(state.currentPrompt.reveal_note)}</p>` : ''}
+            </div>
+          </section>
+
+          <section class="lower-deck">
+            <div class="reveal-list">
+              ${state.voteOptions.map(opt => {
+                const voters = state.players.filter(p => state.votes[p.id] === opt.id);
+                const author = opt.authorId ? state.players.find(p => p.id === opt.authorId) : null;
+                if (!opt.isTruth && !author && voters.length === 0) return '';
+                const tagText = opt.isTruth
+                  ? 'THE TRUTH (+1000)'
+                  : author
+                    ? `${author.name}'s Lie (+500/vote)`
+                    : 'House Decoy';
+
+                return `
+                  <div class="reveal-item ${opt.isTruth ? 'truth' : ''}">
+                    <div class="reveal-top">
+                      <span class="reveal-ans">${escapeHtml(opt.text)}</span>
+                      <span class="reveal-tag">${escapeHtml(tagText)}</span>
+                    </div>
+                    ${voters.length > 0 ? `
+                      <div class="voter-chips">
+                        ${voters.map(v => `
+                          <span class="voter-pill">
+                            ${renderAvatar(v, 18)}
+                            <span>${escapeHtml(v.name)}</span>
+                          </span>
+                        `).join('')}
+                      </div>
+                    ` : ''}
+                  </div>
+                `;
+              }).join('')}
+            </div>
+          </section>
+
+          <div class="bottom-dock">
+            <button class="confirm-btn ready" onclick="advanceAfterReveal()">
+              ${isLast ? 'See Final Podium' : 'Next Random Card →'}
+            </button>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderPodium() {
+      const ranked = [...state.players].sort((a, b) => b.score - a.score);
+      const champ = ranked[0];
+
+      return `
+        <div class="stage">
+          <section class="hero-card" style="flex:0.85;">
+            <div class="hero-header">
+              <span class="round-chip">FINAL STANDINGS</span>
+              <span class="topic-pill">GAME OVER</span>
+            </div>
+            <div class="hero-body" style="gap:10px;">
+              ${renderAvatar(champ, 68)}
+              <h2 class="prompt-text" style="font-size:26px;">👑 ${escapeHtml(champ.name)} Wins!</h2>
+              <div class="status-badge" style="font-size:14px;">${champ.score.toLocaleString()} PTS</div>
+            </div>
+          </section>
+
+          <section class="lower-deck">
+            <div class="reveal-list">
+              ${ranked.map((p, idx) => `
+                <div class="player-row" style="justify-content:space-between;">
+                  <div style="display:flex;align-items:center;gap:10px;">
+                    <span style="font-family:var(--font-mono);font-weight:800;color:var(--text-secondary);width:22px;">#${idx + 1}</span>
+                    ${renderAvatar(p, 34)}
+                    <span style="font-weight:800;font-size:15px;">${escapeHtml(p.name)}</span>
+                  </div>
+                  <span style="font-family:var(--font-mono);font-weight:800;color:var(--mint);">${p.score.toLocaleString()}</span>
+                </div>
+              `).join('')}
+            </div>
+          </section>
+
+          <div class="bottom-dock">
+            <button class="dock-pill-btn" onclick="returnToLobby()">LOBBY</button>
+            <button class="confirm-btn ready" onclick="startGame()">Play Again (New Cards)</button>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderModal() {
+      if (!state.modal) return '';
+
+      if (state.modal === 'AVATAR') {
+        const player = state.players.find(p => p.id === state.editingPlayerId);
+        if (!player) return '';
+        return `
+          <div class="sheet-backdrop" onclick="if(event.target===this) closeModal()">
+            <div class="sheet-card">
+              <div class="sheet-header">
+                <h3 class="sheet-title">Customize ${escapeHtml(player.name)}</h3>
+                <button class="chip-action" onclick="closeModal()">Done</button>
+              </div>
+              <div style="display:flex;justify-content:center;padding:4px 0;">
+                ${renderAvatar(player, 68)}
+              </div>
+              <div class="seg-row">
+                <button class="seg-btn ${player.avatarType === 'emoji' ? 'active' : ''}" onclick="setAvatarType('${player.id}', 'emoji')">Emoji</button>
+                <button class="seg-btn ${player.avatarType === 'initials' ? 'active' : ''}" onclick="setAvatarType('${player.id}', 'initials')">Initials</button>
+              </div>
+              <div class="color-row">
+                ${AVATAR_COLORS.map(c => `
+                  <button class="color-swatch ${player.avatarColor === c ? 'active' : ''}" style="background:${c};" onclick="setAvatarColor('${player.id}', '${c}')"></button>
+                `).join('')}
+              </div>
+              ${player.avatarType === 'emoji' ? `
+                <div class="emoji-grid">
+                  ${AVATAR_EMOJIS.map(em => `
+                    <button class="emoji-opt ${player.avatarValue === em ? 'active' : ''}" onclick="setAvatarEmoji('${player.id}', '${em}')">${em}</button>
+                  `).join('')}
+                </div>
+              ` : ''}
+            </div>
+          </div>
+        `;
+      }
+
+      if (state.modal === 'SUPABASE') {
+        return `
+          <div class="sheet-backdrop" onclick="if(event.target===this) closeModal()">
+            <div class="sheet-card">
+              <div class="sheet-header">
+                <h3 class="sheet-title">☁️ Supabase Cloud Deck</h3>
+                <button class="chip-action" onclick="closeModal()">✕</button>
+              </div>
+              <p style="margin:0;font-size:13px;color:var(--text-secondary);line-height:1.45;">
+                Connect your Supabase PostgreSQL project to stream all active prompts directly from <code style="color:var(--mint);">public.prompts</code>.
+              </p>
+              <div class="field-group">
+                <label>Project URL</label>
+                <input class="field-input" placeholder="https://xyzcompany.supabase.co" value="${escapeHtml(state.supabaseConfig.url)}" oninput="state.supabaseConfig.url=this.value" />
+              </div>
+              <div class="field-group">
+                <label>Publishable Key (sb_publishable_...)</label>
+                <input class="field-input" placeholder="sb_publishable_..." value="${escapeHtml(state.supabaseConfig.key)}" oninput="state.supabaseConfig.key=this.value" />
+              </div>
+              <button class="confirm-btn ready" onclick="syncFromSupabase(false)" ${state.supabaseSyncing ? 'disabled' : ''}>
+                ${state.supabaseSyncing ? 'Syncing Database...' : 'Save & Sync Prompts'}
+              </button>
+            </div>
+          </div>
+        `;
+      }
+
+      if (state.modal === 'SETTINGS') {
+        return `
+          <div class="sheet-backdrop" onclick="if(event.target===this) closeModal()">
+            <div class="sheet-card">
+              <div class="sheet-header">
+                <h3 class="sheet-title">Game Settings</h3>
+                <button class="chip-action" onclick="closeModal()">Done</button>
+              </div>
+              <div class="field-group">
+                <label>Rounds Per Game</label>
+                <div class="seg-row">
+                  ${[3, 5, 7, 10].map(r => `
+                    <button class="seg-btn ${state.settings.totalRounds === r ? 'active' : ''}" onclick="state.settings.totalRounds=${r};render()">${r}</button>
+                  `).join('')}
+                </div>
+              </div>
+              <div class="field-group">
+                <label>Countdown Timer</label>
+                <div class="seg-row">
+                  ${[30, 45, 60, 0].map(t => `
+                    <button class="seg-btn ${state.settings.timerSeconds === t ? 'active' : ''}" onclick="state.settings.timerSeconds=${t};render()">${t === 0 ? 'OFF' : `${t}s`}</button>
+                  `).join('')}
+                </div>
+              </div>
+              <div class="field-group">
+                <label>Sound Effects</label>
+                <div class="seg-row">
+                  <button class="seg-btn ${state.settings.soundEnabled ? 'active' : ''}" onclick="state.settings.soundEnabled=true;render()">ON</button>
+                  <button class="seg-btn ${!state.settings.soundEnabled ? 'active' : ''}" onclick="state.settings.soundEnabled=false;render()">OFF</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        `;
+      }
+
+      if (state.modal === 'HELP') {
+        return `
+          <div class="sheet-backdrop" onclick="if(event.target===this) closeModal()">
+            <div class="sheet-card">
+              <div class="sheet-header">
+                <h3 class="sheet-title">How to Play & iPhone Install</h3>
+                <button class="chip-action" onclick="closeModal()">Got It</button>
+              </div>
+              <p style="margin:0;font-size:13px;color:var(--text-secondary);line-height:1.5;">
+                <strong>1. Write a Lie:</strong> Every round deals a completely random fill-in-the-blank fact. Type a convincing fake answer—or tap <strong>DECOY</strong> if you're stuck.<br><br>
+                <strong>2. Fool Everyone:</strong> All lies are mixed with the real answer. Earn <strong>+1,000 pts</strong> for spotting the truth and <strong>+500 pts</strong> for every player who falls for your lie.<br><br>
+                <strong>3. iPhone Home Screen App:</strong> Open this page in Safari, tap the <strong>Share</strong> icon, and select <strong>Add to Home Screen</strong> for full-screen app mode.
+              </p>
+            </div>
+          </div>
+        `;
+      }
+
+      // MENU DRAWER
+      return `
+        <div class="sheet-backdrop" onclick="if(event.target===this) closeModal()">
+          <div class="sheet-card">
+            <div class="sheet-header">
+              <h3 class="sheet-title">BLUFF // DECK</h3>
+              <button class="chip-action" onclick="closeModal()">✕</button>
+            </div>
+            <button class="cloud-bar-btn" style="padding:13px 14px;" onclick="closeModal();returnToLobby();">
+              <span>🏠 Return to Lobby</span>
+            </button>
+            <button class="cloud-bar-btn ${state.deckSource === 'SUPABASE' ? 'synced' : ''}" style="padding:13px 14px;" onclick="openModal('SUPABASE')">
+              <span>☁️ Supabase Cloud (${state.allPrompts.length} prompts)</span>
+              <span style="font-family:var(--font-mono);font-size:11px;">SYNC ↻</span>
+            </button>
+            <button class="cloud-bar-btn" style="padding:13px 14px;" onclick="openModal('SETTINGS')">
+              <span>⚙️ Round & Timer Settings</span>
+            </button>
+          </div>
+        </div>
+      `;
+    }
+
+    // =========================================================================
+    // 10. EVENT HANDLERS & MAIN RENDER LOOP
+    // =========================================================================
+    function handleBluffTyping(val) {
+      state.draftBluff = val;
+      const promptEl = document.querySelector('.prompt-text');
+      if (promptEl && state.currentPrompt) {
+        promptEl.innerHTML = formatPromptHtml(state.currentPrompt.prompt, val.trim());
+      }
+      const tooClose = isTooCloseToTruth(val, state.currentPrompt);
+      const isReady = val.trim().length > 0 && !tooClose;
+      const btn = document.getElementById('confirmBluffBtn');
+      if (btn) {
+        btn.disabled = !isReady;
+        btn.classList.toggle('ready', isReady);
+      }
+      const card = document.querySelector('.input-card');
+      if (card) {
+        let warn = card.querySelector('.truth-warning');
+        if (tooClose && !warn) {
+          warn = document.createElement('div');
+          warn.className = 'truth-warning';
+          warn.textContent = '⚠️ Too close to the real answer! Write a fake lie instead.';
+          card.appendChild(warn);
+        } else if (!tooClose && warn) {
+          warn.remove();
+        }
+      }
+    }
+
+    function selectVoteOption(optId) {
+      state.selectedOptionId = optId;
+      playTone(580, 0.05, 'sine', 0.05);
+      render();
+    }
+
+    function addPlayer() {
+      if (state.players.length >= 8) return;
+      const idx = state.players.length;
+      state.players.push({
+        id: `p_${Date.now()}_${idx}`,
+        name: `Player ${idx + 1}`,
+        avatarType: 'emoji',
+        avatarValue: AVATAR_EMOJIS[idx % AVATAR_EMOJIS.length],
+        avatarColor: AVATAR_COLORS[idx % AVATAR_COLORS.length],
+        score: 0
+      });
+      render();
+    }
+
+    function removePlayer(id) {
+      if (state.players.length <= 1) return;
+      state.players = state.players.filter(p => p.id !== id);
+      render();
+    }
+
+    function updatePlayerName(id, val) {
+      const p = state.players.find(x => x.id === id);
+      if (p) p.name = val;
+    }
+
+    function openAvatarStudio(playerId) {
+      state.editingPlayerId = playerId;
+      state.modal = 'AVATAR';
+      render();
+    }
+
+    function setAvatarType(id, type) {
+      const p = state.players.find(x => x.id === id);
+      if (p) { p.avatarType = type; render(); }
+    }
+
+    function setAvatarColor(id, color) {
+      const p = state.players.find(x => x.id === id);
+      if (p) { p.avatarColor = color; render(); }
+    }
+
+    function setAvatarEmoji(id, emoji) {
+      const p = state.players.find(x => x.id === id);
+      if (p) { p.avatarValue = emoji; render(); }
+    }
+
+    function openModal(name) {
+      state.modal = name;
+      render();
+    }
+
+    function closeModal() {
+      state.modal = null;
+      render();
+    }
+
+    function returnToLobby() {
+      stopCountdown();
+      state.phase = 'LOBBY';
+      render();
+    }
+
+    function render() {
+      const theme = getActiveTheme();
+      document.documentElement.style.setProperty('--accent-active', theme.bg);
+      document.documentElement.style.setProperty('--accent-ink', theme.ink);
+
+      let screenHtml = '';
+      switch (state.phase) {
+        case 'LOBBY': screenHtml = renderLobby(); break;
+        case 'PASS_BLUFF': screenHtml = renderPassCurtain('PASS_BLUFF'); break;
+        case 'BLUFF_INPUT': screenHtml = renderBluffInput(); break;
+        case 'PASS_VOTE': screenHtml = renderPassCurtain('PASS_VOTE'); break;
+        case 'VOTING': screenHtml = renderVoting(); break;
+        case 'REVEAL': screenHtml = renderReveal(); break;
+        case 'PODIUM': screenHtml = renderPodium(); break;
+      }
+
+      const app = document.getElementById('app');
+      app.innerHTML = `
+        ${renderTopBar()}
+        ${screenHtml}
+        ${renderModal()}
+        ${state.toastMessage ? `<div class="toast">${escapeHtml(state.toastMessage)}</div>` : ''}
+      `;
+    }
+
+    // Boot
+    initApplePWA();
+    hydrateFromStorage();
+    render();
+    if (state.supabaseConfig.url && state.supabaseConfig.key) {
+      syncFromSupabase(true);
+    }
+  </script>
+</body>
+</html>
